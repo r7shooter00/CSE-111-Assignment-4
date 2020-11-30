@@ -23,6 +23,7 @@ unordered_map<string,cxi_command> command_map {
    {"exit", cxi_command::EXIT},
    {"help", cxi_command::HELP},
    {"ls"  , cxi_command::LS  },
+   {"rm"  , cxi_command::RM  },
 };
 
 static const char help[] = R"||(
@@ -58,10 +59,41 @@ void cxi_ls (client_socket& server) {
    }
 }
 
+void cxi_rm (client_socket& server, string filename)
+{
+   cxi_header header;
+   header.command = cxi_command::RM;
+   strcpy(header.filename, filename.c_str());
+   outlog << "sending header " << header << endl;
+   send_packet (server, &header, sizeof header);
+   recv_packet (server, &header, sizeof header);
+   outlog << "received header " << header << endl;
+   if (header.command != cxi_command::ACK) {
+      outlog << "sent RM, server did not return ACK" << endl;
+      outlog << "server returned " << header << endl;
+   }else {
+      cout << "file removed successfully" << endl;
+   }
+}
+
 
 void usage() {
    cerr << "Usage: " << outlog.execname() << " [host] [port]" << endl;
    throw cxi_exit();
+}
+
+vector<string> split (const string& line, const string& delimiters) {
+   vector<string> words;
+   size_t end = 0;
+
+   for (;;) 
+   {
+      size_t start = line.find_first_not_of (delimiters, end);
+      if (start == string::npos) break;
+      end = line.find_first_of (delimiters, start);
+      words.push_back (line.substr (start, end - start));
+   }
+   return words;
 }
 
 int main (int argc, char** argv) {
@@ -81,7 +113,8 @@ int main (int argc, char** argv) {
          getline (cin, line);
          if (cin.eof()) throw cxi_exit();
          outlog << "command " << line << endl;
-         const auto& itor = command_map.find (line);
+         vector<string> words = split(line, " \t");
+         const auto& itor = command_map.find (words.at(0));
          cxi_command cmd = itor == command_map.end()
                          ? cxi_command::ERROR : itor->second;
          switch (cmd) {
@@ -93,6 +126,9 @@ int main (int argc, char** argv) {
                break;
             case cxi_command::LS:
                cxi_ls (server);
+               break;
+            case cxi_command::RM:
+               cxi_rm (server, words.at(1));
                break;
             default:
                outlog << line << ": invalid command" << endl;

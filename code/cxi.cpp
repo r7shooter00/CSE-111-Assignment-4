@@ -10,6 +10,7 @@ using namespace std;
 #include <libgen.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <fstream>
 
 #include "protocol.h"
 #include "logstream.h"
@@ -18,12 +19,12 @@ using namespace std;
 logstream outlog (cout);
 struct cxi_exit: public exception {};
 
-//code
 unordered_map<string,cxi_command> command_map {
    {"exit", cxi_command::EXIT},
    {"help", cxi_command::HELP},
    {"ls"  , cxi_command::LS  },
    {"rm"  , cxi_command::RM  },
+   {"put" , cxi_command::PUT },
 };
 
 static const char help[] = R"||(
@@ -70,12 +71,46 @@ void cxi_rm (client_socket& server, string filename)
    outlog << "received header " << header << endl;
    if (header.command != cxi_command::ACK) {
       outlog << "sent RM, server did not return ACK" << endl;
+      outlog << filename << ": No such file exists" << endl;
       outlog << "server returned " << header << endl;
-   }else {
-      cout << "file removed successfully" << endl;
+   }
+   else
+   {
+      outlog << "file removed successfully" << endl;
    }
 }
 
+void cxi_put(client_socket& server, string filename)
+{
+   cxi_header header;
+   header.command = cxi_command::PUT;
+   strcpy(header.filename, filename.c_str());
+   
+   ifstream file(filename, std::ifstream::binary);
+   file.seekg(0, file.end);
+   int length = file.tellg();
+   file.seekg(0, file.beg);
+   char buffer[length];
+   file.read(buffer, length);
+   header.nbytes = length;
+   
+   outlog << "sending header " << header << endl;
+   send_packet (server, &header, sizeof header);
+   recv_packet (server, &header, sizeof header);
+   outlog << "received header " << header << endl;
+   
+   send_packet(server, buffer, header.nbytes);
+   recv_packet(server, &header, sizeof header);
+   if (header.command != cxi_command::ACK) {
+      outlog << "sent RM, server did not return ACK" << endl;
+      outlog << filename << ": No such file exists" << endl;
+      outlog << "server returned " << header << endl;
+   }
+   else
+   {
+      outlog << "file sent successfully" << endl;
+   }
+}
 
 void usage() {
    cerr << "Usage: " << outlog.execname() << " [host] [port]" << endl;
@@ -129,6 +164,9 @@ int main (int argc, char** argv) {
                break;
             case cxi_command::RM:
                cxi_rm (server, words.at(1));
+               break;
+            case cxi_command::PUT:
+               cxi_put (server, words.at(1));
                break;
             default:
                outlog << line << ": invalid command" << endl;

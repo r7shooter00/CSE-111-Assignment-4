@@ -8,6 +8,7 @@ using namespace std;
 #include <libgen.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <fstream>
 
 #include "protocol.h"
 #include "logstream.h"
@@ -49,23 +50,41 @@ void reply_ls (accepted_socket& client_sock, cxi_header& header) {
 
 void reply_rm (accepted_socket& client_sock, cxi_header& header)
 {
-   const char* rm_cmd = "rm -l 2>&1";
-   FILE* rm_pipe = popen (rm_cmd, "r");
-   if (rm_pipe == NULL) { 
-      outlog << "rm -l: popen failed: " << strerror (errno) << endl;
-      header.command = cxi_command::NAK;
-      header.nbytes = htonl (errno);
-      send_packet (client_sock, &header, sizeof header);
-      return;
+   if(access(header.filename, F_OK) != -1)
+   {
+      unlink(header.filename);
+      header.command = cxi_command::ACK;
    }
-   remove(header.filename);
-   header.command = cxi_command::ACK;
+   else
+   {
+      header.command = cxi_command::NAK;
+   }
    header.nbytes = htonl (1);
    memset (header.filename, 0, FILENAME_SIZE);
    outlog << "sending header " << header << endl;
    send_packet (client_sock, &header, sizeof header);
 }
 
+void reply_put(accepted_socket& client_sock, cxi_header& header)
+{
+   char buffer[header.nbytes];
+   send_packet(client_sock, &header, sizeof header);
+   recv_packet(client_sock, buffer, header.nbytes);
+
+   ofstream file (header.filename, std::ofstream::binary);
+   if(access(header.filename, F_OK) != -1)
+   {
+      file.write(buffer, header.nbytes);
+      header.command = cxi_command::ACK;
+   }
+   else
+   {
+      header.command = cxi_command::NAK;
+   }
+   memset (header.filename, 0, FILENAME_SIZE);
+   outlog << "sending header " << header << endl;
+   send_packet (client_sock, &header, sizeof header);
+}
 
 void run_server (accepted_socket& client_sock) {
    outlog.execname (outlog.execname() + "-server");
@@ -81,6 +100,9 @@ void run_server (accepted_socket& client_sock) {
                break;
             case cxi_command::RM:
                reply_rm (client_sock, header);
+               break;
+            case cxi_command::PUT:
+               reply_put (client_sock, header);
                break;
             default:
                outlog << "invalid client header:" << header << endl;

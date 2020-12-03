@@ -1,4 +1,6 @@
 // $Id: sockets.h,v 1.2 2016-05-09 16:01:56-07 - - $
+// -- Alain Kassarjian (akassarj@ucsc.edu)
+// -- Warner Scheibe   (wscheibe@ucsc.edu)
 
 #ifndef __SOCKET_H__
 #define __SOCKET_H__

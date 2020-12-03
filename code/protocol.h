@@ -1,4 +1,6 @@
 // $Id: protocol.h,v 1.8 2020-07-18 23:33:51-07 - - $
+// -- Alain Kassarjian (akassarj@ucsc.edu)
+// -- Warner Scheibe   (wscheibe@ucsc.edu)
 
 #ifndef __PROTOCOL__H__
 #define __PROTOCOL__H__

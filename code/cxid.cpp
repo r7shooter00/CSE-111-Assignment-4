@@ -85,6 +85,21 @@ void reply_put(accepted_socket& client_sock, cxi_header& header)
    outlog << "sending header " << header << endl;
    send_packet (client_sock, &header, sizeof header);
 }
+
+void reply_get(accepted_socket& client_sock, cxi_header& header)
+{
+   ifstream file(header.filename, std::ifstream::binary);
+   file.seekg(0, file.end);
+   int length = file.tellg();
+   file.seekg(0, file.beg);
+   char buffer[length];
+   file.read(buffer, length);
+   header.nbytes = length;
+   header.command = cxi_command::FILEOUT;
+   outlog << "sending header " << header << endl;
+   send_packet(client_sock, &header, sizeof header);
+   send_packet(client_sock, buffer, header.nbytes);
+}
 
 void run_server (accepted_socket& client_sock) {
    outlog.execname (outlog.execname() + "-server");
@@ -103,6 +118,9 @@ void run_server (accepted_socket& client_sock) {
                break;
             case cxi_command::PUT:
                reply_put (client_sock, header);
+               break;
+            case cxi_command::GET:
+               reply_get (client_sock, header);
                break;
             default:
                outlog << "invalid client header:" << header << endl;

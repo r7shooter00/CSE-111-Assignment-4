@@ -25,6 +25,7 @@ unordered_map<string,cxi_command> command_map {
    {"ls"  , cxi_command::LS  },
    {"rm"  , cxi_command::RM  },
    {"put" , cxi_command::PUT },
+   {"get" , cxi_command::GET },
 };
 
 static const char help[] = R"||(
@@ -98,7 +99,7 @@ void cxi_put(client_socket& server, string filename)
    send_packet (server, &header, sizeof header);
    recv_packet (server, &header, sizeof header);
    outlog << "received header " << header << endl;
-   
+
    send_packet(server, buffer, header.nbytes);
    recv_packet(server, &header, sizeof header);
    if (header.command != cxi_command::ACK) {
@@ -110,6 +111,26 @@ void cxi_put(client_socket& server, string filename)
    {
       outlog << "file sent successfully" << endl;
    }
+}
+
+void cxi_get(client_socket& server, string filename)
+{
+   cxi_header header;
+   header.command = cxi_command::GET;
+   strcpy(header.filename, filename.c_str());
+   outlog << "sending header" << endl;
+   send_packet(server, &header, sizeof header);
+   recv_packet(server, &header, sizeof header);
+   outlog << "received header " << header << endl;
+   char buffer[header.nbytes];
+   recv_packet(server, buffer, header.nbytes);
+
+   if(header.command == cxi_command::FILEOUT)
+   {
+      outlog << "file retrieved successfully" << endl;
+   }
+   ofstream file (header.filename, std::ofstream::binary);
+   file.write(buffer, header.nbytes);
 }
 
 void usage() {
@@ -167,6 +188,9 @@ int main (int argc, char** argv) {
                break;
             case cxi_command::PUT:
                cxi_put (server, words.at(1));
+               break;
+            case cxi_command::GET:
+               cxi_get (server, words.at(1));
                break;
             default:
                outlog << line << ": invalid command" << endl;

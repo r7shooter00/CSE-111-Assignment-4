@@ -1,4 +1,6 @@
 // $Id: protocol.cpp,v 1.12 2020-07-18 23:33:51-07 - - $
+// -- Alain Kassarjian (akassarj@ucsc.edu)
+// -- Warner Scheibe   (wscheibe@ucsc.edu)
 
 #include <string>
 #include <unordered_map>

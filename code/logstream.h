@@ -1,4 +1,6 @@
 // $Id: logstream.h,v 1.4 2020-11-19 14:34:47-08 - - $
+// -- Alain Kassarjian (akassarj@ucsc.edu)
+// -- Warner Scheibe   (wscheibe@ucsc.edu)
 
 //
 // class logstream
